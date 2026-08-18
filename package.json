@@ -1,0 +1,30 @@
+{
+  "name": "discord-youtube-video-alerter",
+  "version": "1.0.0",
+  "description": "A small bot to post new videos to a Discord channel.",
+  "homepage": "https://github.com/TheAppleFreak/discord-youtube-video-alerter#readme",
+  "bugs": {
+    "url": "https://github.com/TheAppleFreak/discord-youtube-video-alerter/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheAppleFreak/discord-youtube-video-alerter.git"
+  },
+  "license": "MIT",
+  "author": "TheAppleFreak",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "start": "env-cmd -f .env -- node --experimental-strip-types index.ts"
+  },
+  "dependencies": {
+    "axios": "^1.19.0",
+    "consola": "^3.4.2",
+    "env-cmd": "^11.0.0",
+    "env-var": "^7.5.0",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0"
+  }
+}
