@@ -1,5 +1,5 @@
 import env from "env-var";
-import axios, { isCancel, AxiosError } from "axios";
+import axios from "axios";
 import Parser from "rss-parser";
 import { consola } from "consola";
 
@@ -16,6 +16,7 @@ const CONTENT_TYPE = env
     .get("YOUTUBE_CONTENT_TYPE")
     .default("video")
     .asEnum([
+        "all",
         "video",
         "videos",
         "popularVideos",
@@ -39,6 +40,9 @@ const UPDATE_INTERVAL = env.get("UPDATE_INTERVAL").default("120").asIntPositive(
 // https://stackoverflow.com/questions/71192605/how-do-i-get-youtube-shorts-from-youtube-api-data-v3/76602819#76602819
 let CONTENT_PREFIX: string;
 switch (CONTENT_TYPE) {
+    case "all":
+        CONTENT_PREFIX = "UC";
+        break;
     case "video":
     case "videos":
         CONTENT_PREFIX = "UULF";
@@ -90,12 +94,24 @@ let lastUploadedTime: number =
         : new Date(env.get("DEBUG_DATE").asString()!).getTime();
 
 const checkForVideos = async () => {
-    // The RSS feed is newest-first, so we reverse it to ensure we're not setting lastUploadedTime incorrectly
-    const feed = (
-        await parser.parseURL(
+    // Turns out the YouTube RSS feed builder has lots of downtime. That's a lot of red...
+    // https://stats.uptimerobot.com/v6szxXApfC/802909356
+    // Anyways, error handling. Just try again next refresh.
+    let rssResponse: Awaited<ReturnType<typeof parser.parseURL>>;
+    try {
+        rssResponse = await parser.parseURL(
             `https://www.youtube.com/feeds/videos.xml?playlist_id=${CONTENT_PREFIX}${CHANNEL_ID}`
-        )
-    ).items.reverse();
+        );
+    } catch (err) {
+        // At some point I should add some basic exponential backoff to this,
+        // but at 120 seconds default interval that's not gonna hammer it hard
+        consola.warn(
+            `Could not fetch YouTube RSS API, retrying in ${UPDATE_INTERVAL} seconds...`
+        );
+        return;
+    }
+    // The RSS feed is newest-first, so we reverse it to ensure we're not setting lastUploadedTime incorrectly
+    const feed = rssResponse!.items.reverse();
 
     let videoPosted = false;
 
@@ -106,7 +122,7 @@ const checkForVideos = async () => {
         const uploadDate = new Date(video.isoDate!).getTime();
         if (uploadDate <= lastUploadedTime) {
             continue;
-        };
+        }
         lastUploadedTime = uploadDate;
         videoPosted = true;
 
@@ -115,7 +131,10 @@ const checkForVideos = async () => {
         });
     }
 
-    if (videoPosted) consola.log(`Posted new video on ${new Date().toDateString()} at ${new Date().toTimeString()}`);
+    if (videoPosted)
+        consola.log(
+            `Posted new video on ${new Date().toDateString()} at ${new Date().toTimeString()}`
+        );
 };
 
 checkForVideos();
