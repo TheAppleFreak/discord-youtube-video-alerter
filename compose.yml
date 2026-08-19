@@ -1,0 +1,6 @@
+services:
+  app:
+    container_name: video-alerter
+    build: .
+    restart: unless-stopped
+    env_file: .env
